@@ -1,10 +1,10 @@
 CHANGELOG
 =========
 
-0.8
+0.7
 ---
 
- * Add `framework` session store backed by Symfony's `SessionHandlerInterface`
+ * Add `routes` config option for registering additional paths through the MCP controller
 
 0.4
 ---

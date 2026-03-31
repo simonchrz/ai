@@ -160,18 +160,16 @@ The MCP Bundle supports two transport types for server communication:
 The HTTP transport uses the MCP SDK's ``StreamableHttpTransport`` which supports:
 
 - JSON-RPC 2.0 over HTTP POST requests
-- Session management with configurable storage (file/memory/cache/framework)
+- Session management with configurable storage (file/memory/cache)
 - CORS headers for cross-origin requests
 - Proper MCP initialization handshake
 
 Session Storage
 ...............
 
-The MCP Bundle supports four types of session storage for the HTTP transport:
+The MCP Bundle supports three types of session storage for the HTTP transport:
 
-**File Storage** (default) - Stores sessions on the filesystem:
-
-.. code-block:: yaml
+**File Storage** (default) - Stores sessions on the filesystem::
 
     mcp:
         http:
@@ -180,9 +178,7 @@ The MCP Bundle supports four types of session storage for the HTTP transport:
                 directory: '%kernel.cache_dir%/mcp-sessions'
                 ttl: 3600
 
-**Memory Storage** - Stores sessions in memory (non-persistent):
-
-.. code-block:: yaml
+**Memory Storage** - Stores sessions in memory (non-persistent)::
 
     mcp:
         http:
@@ -190,9 +186,7 @@ The MCP Bundle supports four types of session storage for the HTTP transport:
                 store: memory
                 ttl: 3600
 
-**PSR-16 Cache Storage** - Stores sessions in any PSR-16 compliant cache (Redis, Doctrine, APCu, etc.):
-
-.. code-block:: yaml
+**PSR-16 Cache Storage** - Stores sessions in any PSR-16 compliant cache (Redis, Doctrine, APCu, etc.)::
 
     mcp:
         http:
@@ -211,7 +205,7 @@ To use a custom cache backend, you need to configure a PSR-16 cache service in y
     Symfony cache pools are PSR-6 by default. The MCP session store requires PSR-16.
     Use ``Symfony\Component\Cache\Psr16Cache`` to wrap a PSR-6 pool into PSR-16.
 
-.. code-block:: yaml
+::
 
     # config/services.yaml
     services:
@@ -224,18 +218,42 @@ To use a custom cache backend, you need to configure a PSR-16 cache service in y
 This allows you to store sessions in Redis, a SQL database via Doctrine, or any other PSR-6 cache adapter.
 See the `Symfony Cache documentation`_ for more details on configuring cache pools.
 
-**Framework Storage** - Uses Symfony's ``SessionHandlerInterface`` for session persistence::
+Tool Authorization
+..................
 
-    mcp:
-        http:
-            session:
-                store: framework
-                prefix: 'mcp-' # Optional prefix for session keys
-                ttl: 3600
+When the Symfony Security component is available, the bundle automatically registers
+tool authorization support using ``#[IsGranted]`` attributes.
 
-This wraps the configured Symfony session handler (e.g. Redis, database, filesystem — whatever
-your application uses for HTTP sessions) with a JSON envelope for application-level TTL.
-Expired sessions are cleaned up lazily on read.
+**Filtering tool lists** — ``FilteredListToolsHandler`` is auto-registered and filters
+the ``tools/list`` response so users only see tools they are authorized to use.
+Unauthenticated users receive an empty tool list::
+
+    use Mcp\Capability\Attribute\McpTool;
+    use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+    class AccountTools
+    {
+        #[McpTool(name: 'delete_account')]
+        #[IsGranted('ROLE_ADMIN')]
+        public function deleteAccount(string $id): array
+        {
+            // Only visible and executable by users with ROLE_ADMIN
+        }
+    }
+
+**Blocking tool execution** — To also enforce authorization at execution time, register
+``SecurityReferenceHandler`` as a decorator for the default reference handler::
+
+    # config/services.yaml
+    services:
+        Symfony\AI\McpBundle\Security\SecurityReferenceHandler:
+            decorates: mcp.reference_handler
+            arguments:
+                - '@.inner'
+                - '@mcp.is_granted_checker'
+
+This throws ``AccessDeniedException`` if a user tries to call a tool they are not
+authorized to use.
 
 Act as Client
 ~~~~~~~~~~~~~
@@ -287,7 +305,7 @@ Configuration
         http:
             path: /_mcp # HTTP endpoint path (default: /_mcp)
             session:
-                store: file # Session store type: 'file', 'memory', 'cache', or 'framework' (default: file)
+                store: file # Session store type: 'file', 'memory', or 'cache' (default: file)
                 directory: '%kernel.cache_dir%/mcp-sessions' # Directory for file store (default: cache_dir/mcp-sessions)
                 cache_pool: 'cache.mcp.sessions' # Cache pool service for cache store (default: cache.mcp.sessions)
                 prefix: 'mcp-' # Prefix for cache keys (default: 'mcp-')

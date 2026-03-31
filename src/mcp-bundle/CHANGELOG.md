@@ -4,7 +4,9 @@ CHANGELOG
 0.7
 ---
 
- * Add `routes` config option for registering additional paths through the MCP controller
+ * Add tool authorization via `#[IsGranted]` attributes using Symfony Security
+ * Add `FilteredListToolsHandler` to filter `tools/list` based on user grants
+ * Add `SecurityReferenceHandler` to enforce access control on tool execution
 
 0.4
 ---

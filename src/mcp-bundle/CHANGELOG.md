@@ -1,9 +1,10 @@
 CHANGELOG
 =========
 
-0.7
+0.8
 ---
 
+ * Add `framework` session store backed by Symfony's `SessionHandlerInterface`
  * Add tool authorization via `#[IsGranted]` attributes using Symfony Security
  * Add `FilteredListToolsHandler` to filter `tools/list` based on user grants
  * Add `SecurityReferenceHandler` to enforce access control on tool execution
